@@ -1,27 +1,38 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ContactDialog } from "@/components/contact-dialog";
 import { Button } from "@/components/ui/button";
 import { fetchCard } from "@/lib/deck-client";
+import { forgetContact, rememberContact, rememberedCard } from "@/lib/deck-cache";
 import { formatDay, initials } from "@/lib/format";
 import type { CardPage, Contact, ContactPoint, RelatedCard } from "@/lib/types";
 import { cn } from "cn";
 
+const ContactDialog = dynamic(
+  () => import("@/components/contact-dialog").then((mod) => mod.ContactDialog),
+  { loading: () => <p className="mt-6 text-sm text-muted-foreground">Opening the form…</p> },
+);
+
 export function CardScreen({ id }: { id: string }) {
   const router = useRouter();
   const [seenId, setSeenId] = useState(id);
-  const [page, setPage] = useState<CardPage | null>(null);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [page, setPage] = useState<CardPage | null>(() => rememberedCard(id));
+  const [status, setStatus] = useState<"loading" | "ready" | "error">(() =>
+    rememberedCard(id) ? "ready" : "loading",
+  );
+  const [related, setRelated] = useState<RelatedCard[] | null>(null);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(false);
 
   if (seenId !== id) {
+    const next = rememberedCard(id);
     setSeenId(id);
-    setPage(null);
-    setStatus("loading");
+    setPage(next);
+    setStatus(next ? "ready" : "loading");
+    setRelated(null);
     setError("");
     setEditing(false);
   }
@@ -31,12 +42,15 @@ export function CardScreen({ id }: { id: string }) {
     fetchCard(id)
       .then((data) => {
         if (controller.signal.aborted) return;
+        rememberContact(data.contact);
         setPage(data);
+        setRelated(data.related);
         setStatus("ready");
         setError("");
       })
       .catch((caught) => {
         if (controller.signal.aborted) return;
+        if (rememberedCard(id)) return;
         setStatus("error");
         setError(caught instanceof Error ? caught.message : "The card could not be opened.");
       });
@@ -49,7 +63,9 @@ export function CardScreen({ id }: { id: string }) {
     }
     try {
       const data = await fetchCard(id);
+      rememberContact(data.contact);
       setPage(data);
+      setRelated(data.related);
       setStatus("ready");
     } catch {
       if (saved) setStatus("ready");
@@ -88,13 +104,16 @@ export function CardScreen({ id }: { id: string }) {
                 void refresh(saved);
               }}
               onDone={() => setEditing(false)}
-              onDeleted={() => router.push("/")}
+              onDeleted={() => {
+                forgetContact(id);
+                router.push("/");
+              }}
             />
           </div>
         ) : (
           <div className="mt-6 flex flex-col gap-10">
             <ReadingCard contact={page.contact} today={page.today} onEdit={() => setEditing(true)} />
-            <Related related={page.related} />
+            {related ? <Related related={related} /> : null}
           </div>
         )
       ) : null}

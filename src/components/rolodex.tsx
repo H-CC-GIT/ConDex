@@ -1,58 +1,64 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DeckMenu } from "@/components/deck-menu";
 import { QuickAddDialog } from "@/components/quick-add-dialog";
 import { RolodexWheel } from "@/components/rolodex-wheel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getBook, saveBook } from "@/lib/deck-cache";
 import { fetchDeck } from "@/lib/deck-client";
+import { filterDesk } from "@/lib/deck-view";
 import type { Deck } from "@/lib/types";
 
 export function Rolodex({ tag = "", fromId = "" }: { tag?: string; fromId?: string }) {
+  const cached = getBook();
   const [query, setQuery] = useState("");
   const [dueOnly, setDueOnly] = useState(false);
-  const [deck, setDeck] = useState<Deck | null>(null);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [book, setBook] = useState<Deck | null>(cached);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">(cached ? "ready" : "loading");
   const [loadError, setLoadError] = useState("");
   const [searchError, setSearchError] = useState("");
-  const [pending, setPending] = useState(false);
-  const [selected, setSelected] = useState(0);
+  const [selected, setSelected] = useState(() => selectedIn(cached, tag, fromId));
   const [addOpen, setAddOpen] = useState(false);
   const [nudge, setNudge] = useState(0);
   const router = useRouter();
   const searchRef = useRef<HTMLInputElement>(null);
   const requestId = useRef(0);
-  const seenDeck = useRef(false);
   const preferId = useRef<string | null>(null);
-  const pinFor = useRef<string | null>(null);
-  const pinKey = useRef("");
+  const pinFor = useRef<string | null>(fromId || null);
+  const pinKey = useRef(`${tag}\n${fromId}`);
 
-  const load = useCallback(async (nextQuery: string, nextDue: boolean, nextTag = "") => {
+  const load = useCallback(async () => {
     const id = ++requestId.current;
-    setPending(true);
     try {
-      const data = await fetchDeck(nextQuery, nextDue, nextTag);
+      const data = await fetchDeck("", false, "");
       if (id !== requestId.current) return;
-      seenDeck.current = true;
-      setDeck(data);
+      saveBook(data);
+      setBook(data);
       setStatus("ready");
       setLoadError("");
       setSearchError("");
     } catch (caught) {
       if (id !== requestId.current) return;
       const message = caught instanceof Error ? caught.message : "The deck could not finish that.";
-      if (!seenDeck.current) {
+      if (getBook()) {
+        setStatus("ready");
+        setSearchError(message);
+      } else {
         setStatus("error");
         setLoadError(message);
-      } else {
-        setSearchError(message);
       }
-    } finally {
-      if (id === requestId.current) setPending(false);
     }
   }, []);
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      void load();
+    }, 0);
+    return () => window.clearTimeout(handle);
+  }, [load]);
 
   useEffect(() => {
     const key = `${tag}\n${fromId}`;
@@ -60,26 +66,39 @@ export function Rolodex({ tag = "", fromId = "" }: { tag?: string; fromId?: stri
       pinKey.current = key;
       pinFor.current = fromId || null;
     }
-    const handle = window.setTimeout(() => {
-      void load(query, dueOnly, tag);
-    }, seenDeck.current ? 120 : 0);
-    return () => window.clearTimeout(handle);
-  }, [query, dueOnly, tag, fromId, load]);
+  }, [tag, fromId]);
 
   useEffect(() => {
     searchRef.current?.focus();
   }, []);
 
+  const contacts = useMemo(
+    () => (book ? filterDesk(book, query, dueOnly, tag) : []),
+    [book, query, dueOnly, tag],
+  );
+
   useEffect(() => {
     const prefer = preferId.current || pinFor.current;
-    if (!deck || !prefer) return;
-    const index = deck.contacts.findIndex((contact) => contact.id === prefer);
-    if (index >= 0) setSelected(index);
+    if (!book || !prefer) return;
+    const index = contacts.findIndex((contact) => contact.id === prefer);
+    if (index >= 0) {
+      setSelected(index);
+      preferId.current = null;
+      pinFor.current = null;
+      return;
+    }
+    const waitingForBook =
+      preferId.current != null && !book.contacts.some((contact) => contact.id === preferId.current);
+    if (waitingForBook) return;
     preferId.current = null;
     pinFor.current = null;
-  }, [deck]);
+  }, [book, contacts]);
 
-  const contacts = deck?.contacts ?? [];
+  useEffect(() => {
+    for (const contact of contacts) {
+      router.prefetch(`/cards/${contact.id}`);
+    }
+  }, [contacts, router]);
   const count = contacts.length;
   const safeSelected = count === 0 ? 0 : Math.min(selected, count - 1);
   const active = contacts[safeSelected];
@@ -144,8 +163,8 @@ export function Rolodex({ tag = "", fromId = "" }: { tag?: string; fromId?: stri
     requestAnimationFrame(() => searchRef.current?.focus());
   }
 
-  const due = deck?.due ?? [];
-  const today = deck?.today ?? "";
+  const due = book?.due ?? [];
+  const today = book?.today ?? "";
 
   return (
     <div className="mx-auto flex min-h-full w-full max-w-6xl flex-1 flex-col overflow-x-clip py-6 pl-4 pr-8 md:px-8 md:py-10">
@@ -165,7 +184,7 @@ export function Rolodex({ tag = "", fromId = "" }: { tag?: string; fromId?: stri
           <DeckMenu
             onImported={() => {
               preferId.current = null;
-              void load(query, dueOnly, tag);
+              void load();
             }}
           />
         </div>
@@ -193,7 +212,7 @@ export function Rolodex({ tag = "", fromId = "" }: { tag?: string; fromId?: stri
           }}
         />
         <p className="text-xs text-muted-foreground">
-          {pending ? "Looking through the deck…" : "Arrows move the cards. Enter opens one. Alt N adds."}
+          {status === "loading" ? "Looking through the deck…" : "Arrows move the cards. Enter opens one. Alt N adds."}
         </p>
       </div>
 
@@ -249,13 +268,13 @@ export function Rolodex({ tag = "", fromId = "" }: { tag?: string; fromId?: stri
       {searchError ? (
         <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-destructive/40 px-4 py-3 text-sm" role="alert">
           <p>{searchError}</p>
-          <Button type="button" variant="outline" size="sm" onClick={() => void load(query, dueOnly, tag)}>
+          <Button type="button" variant="outline" size="sm" onClick={() => void load()}>
             Try again
           </Button>
         </div>
       ) : null}
 
-      <main className="mt-6 flex min-h-0 flex-1 flex-col overflow-x-clip" aria-busy={status === "loading" || pending}>
+      <main className="mt-6 flex min-h-0 flex-1 flex-col overflow-x-clip" aria-busy={status === "loading"}>
         <RolodexWheel
           contacts={status === "ready" ? contacts : []}
           index={safeSelected}
@@ -272,7 +291,7 @@ export function Rolodex({ tag = "", fromId = "" }: { tag?: string; fromId?: stri
                 title="The deck didn’t open."
                 body={loadError || "Something went wrong while reading the cards."}
                 action={
-                  <Button type="button" onClick={() => void load(query, dueOnly, tag)}>
+                  <Button type="button" onClick={() => void load()}>
                     Try again
                   </Button>
                 }
@@ -280,9 +299,9 @@ export function Rolodex({ tag = "", fromId = "" }: { tag?: string; fromId?: stri
             ) : (
               <StageCard
                 title={emptyTitle(query, dueOnly, tag)}
-                body={emptyBody(query, dueOnly, tag, (deck?.directory.length ?? 0) === 0)}
+                body={emptyBody(query, dueOnly, tag, (book?.directory.length ?? 0) === 0)}
                 action={
-                  (deck?.directory.length ?? 0) === 0 ? (
+                  (book?.directory.length ?? 0) === 0 ? (
                     <Button type="button" onClick={() => setAddOpen(true)}>
                       Add a card
                     </Button>
@@ -325,19 +344,21 @@ export function Rolodex({ tag = "", fromId = "" }: { tag?: string; fromId?: stri
         onCreated={(contact) => {
           setAddOpen(false);
           preferId.current = contact.id;
-          const leavingTag = Boolean(tag || fromId);
-          if (leavingTag) router.push("/");
-          if (query === "" && !dueOnly) {
-            if (!leavingTag) void load("", false, "");
-          } else {
-            setQuery("");
-            setDueOnly(false);
-          }
+          if (query !== "") setQuery("");
+          if (dueOnly) setDueOnly(false);
+          if (tag || fromId) router.push("/");
+          void load();
           focusSearch();
         }}
       />
     </div>
   );
+}
+
+function selectedIn(book: Deck | null, tag: string, fromId: string) {
+  if (!book || !fromId) return 0;
+  const index = filterDesk(book, "", false, tag).findIndex((contact) => contact.id === fromId);
+  return index >= 0 ? index : 0;
 }
 
 function emptyTitle(query: string, dueOnly: boolean, tag: string) {
