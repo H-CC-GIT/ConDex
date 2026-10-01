@@ -12,15 +12,22 @@ import { fetchDeck } from "@/lib/deck-client";
 import { filterDesk } from "@/lib/deck-view";
 import type { Deck } from "@/lib/types";
 
-export function Rolodex({ tag = "", fromId = "" }: { tag?: string; fromId?: string }) {
-  const cached = getBook();
+export function Rolodex({
+  tag = "",
+  fromId = "",
+  initialBook = null,
+}: {
+  tag?: string;
+  fromId?: string;
+  initialBook?: Deck | null;
+}) {
   const [query, setQuery] = useState("");
   const [dueOnly, setDueOnly] = useState(false);
-  const [book, setBook] = useState<Deck | null>(cached);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">(cached ? "ready" : "loading");
+  const [book, setBook] = useState<Deck | null>(initialBook);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">(initialBook ? "ready" : "loading");
   const [loadError, setLoadError] = useState("");
   const [searchError, setSearchError] = useState("");
-  const [selected, setSelected] = useState(() => selectedIn(cached, tag, fromId));
+  const [selected, setSelected] = useState(() => selectedIn(initialBook, tag, fromId));
   const [addOpen, setAddOpen] = useState(false);
   const [nudge, setNudge] = useState(0);
   const router = useRouter();
@@ -52,6 +59,10 @@ export function Rolodex({ tag = "", fromId = "" }: { tag?: string; fromId?: stri
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (book) saveBook(book);
+  }, [book]);
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -145,7 +156,10 @@ export function Rolodex({ tag = "", fromId = "" }: { tag?: string; fromId?: stri
 
       if (event.key === "Enter" && inSearch) {
         event.preventDefault();
-        if (active) router.push(`/cards/${active.id}`);
+        if (active) {
+          if (book) saveBook(book);
+          router.push(`/cards/${active.id}`);
+        }
         return;
       }
 
@@ -157,7 +171,7 @@ export function Rolodex({ tag = "", fromId = "" }: { tag?: string; fromId?: stri
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [addOpen, active, move, router]);
+  }, [addOpen, active, book, move, router]);
 
   function focusSearch() {
     requestAnimationFrame(() => searchRef.current?.focus());
@@ -280,7 +294,10 @@ export function Rolodex({ tag = "", fromId = "" }: { tag?: string; fromId?: stri
           index={safeSelected}
           query={query}
           today={today}
-          onOpen={(id) => router.push(`/cards/${id}`)}
+          onOpen={(id) => {
+            if (book) saveBook(book);
+            router.push(`/cards/${id}`);
+          }}
           onMove={move}
           nudge={nudge}
           placeholder={

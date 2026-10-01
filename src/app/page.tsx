@@ -1,4 +1,5 @@
 import { Rolodex } from "@/components/rolodex";
+import { listDeck } from "@/lib/contacts";
 
 export default async function Home({
   searchParams,
@@ -6,7 +7,8 @@ export default async function Home({
   searchParams: Promise<{ tag?: string | string[]; from?: string | string[] }>;
 }) {
   const params = await searchParams;
-  return <Rolodex tag={firstParam(params.tag)} fromId={firstParam(params.from)} />;
+  const book = listDeck("", false, "");
+  return <Rolodex tag={firstParam(params.tag)} fromId={firstParam(params.from)} initialBook={book} />;
 }
 
 function firstParam(value: string | string[] | undefined) {
