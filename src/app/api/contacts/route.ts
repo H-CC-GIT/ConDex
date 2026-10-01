@@ -11,7 +11,8 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const query = url.searchParams.get("q") ?? "";
     const dueOnly = url.searchParams.get("due") === "1";
-    return NextResponse.json(listDeck(query, dueOnly));
+    const tag = url.searchParams.get("tag") ?? "";
+    return NextResponse.json(listDeck(query, dueOnly, tag));
   } catch (error) {
     return fail(error);
   }

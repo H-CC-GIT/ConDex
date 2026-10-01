@@ -12,10 +12,11 @@ async function send<T>(response: Response) {
   return (await response.json()) as T;
 }
 
-export function fetchDeck(query: string, dueOnly: boolean) {
+export function fetchDeck(query: string, dueOnly: boolean, tag = "") {
   const params = new URLSearchParams();
   if (query.trim()) params.set("q", query);
   if (dueOnly) params.set("due", "1");
+  if (tag.trim()) params.set("tag", tag.trim());
   const queryString = params.toString();
   const suffix = queryString ? `?${queryString}` : "";
   return fetch(apiUrl(`/api/contacts${suffix}`), { cache: "no-store" }).then((response) =>

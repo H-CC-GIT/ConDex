@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { fetchDeck } from "@/lib/deck-client";
 import type { Deck } from "@/lib/types";
 
-export function Rolodex() {
+export function Rolodex({ tag = "", fromId = "" }: { tag?: string; fromId?: string }) {
   const [query, setQuery] = useState("");
   const [dueOnly, setDueOnly] = useState(false);
   const [deck, setDeck] = useState<Deck | null>(null);
@@ -26,12 +26,14 @@ export function Rolodex() {
   const requestId = useRef(0);
   const seenDeck = useRef(false);
   const preferId = useRef<string | null>(null);
+  const pinFor = useRef<string | null>(null);
+  const pinKey = useRef("");
 
-  const load = useCallback(async (nextQuery: string, nextDue: boolean) => {
+  const load = useCallback(async (nextQuery: string, nextDue: boolean, nextTag = "") => {
     const id = ++requestId.current;
     setPending(true);
     try {
-      const data = await fetchDeck(nextQuery, nextDue);
+      const data = await fetchDeck(nextQuery, nextDue, nextTag);
       if (id !== requestId.current) return;
       seenDeck.current = true;
       setDeck(data);
@@ -53,21 +55,28 @@ export function Rolodex() {
   }, []);
 
   useEffect(() => {
+    const key = `${tag}\n${fromId}`;
+    if (pinKey.current !== key) {
+      pinKey.current = key;
+      pinFor.current = fromId || null;
+    }
     const handle = window.setTimeout(() => {
-      void load(query, dueOnly);
+      void load(query, dueOnly, tag);
     }, seenDeck.current ? 120 : 0);
     return () => window.clearTimeout(handle);
-  }, [query, dueOnly, load]);
+  }, [query, dueOnly, tag, fromId, load]);
 
   useEffect(() => {
     searchRef.current?.focus();
   }, []);
 
   useEffect(() => {
-    if (!deck || !preferId.current) return;
-    const index = deck.contacts.findIndex((contact) => contact.id === preferId.current);
+    const prefer = preferId.current || pinFor.current;
+    if (!deck || !prefer) return;
+    const index = deck.contacts.findIndex((contact) => contact.id === prefer);
     if (index >= 0) setSelected(index);
     preferId.current = null;
+    pinFor.current = null;
   }, [deck]);
 
   const contacts = deck?.contacts ?? [];
@@ -156,7 +165,7 @@ export function Rolodex() {
           <DeckMenu
             onImported={() => {
               preferId.current = null;
-              void load(query, dueOnly);
+              void load(query, dueOnly, tag);
             }}
           />
         </div>
@@ -187,6 +196,22 @@ export function Rolodex() {
           {pending ? "Looking through the deck…" : "Arrows move the cards. Enter opens one. Alt N adds."}
         </p>
       </div>
+
+      {tag ? (
+        <p className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-muted-foreground">
+          <span className="break-words">
+            Tagged <span className="text-foreground">{tag}</span>.
+          </span>
+          {status === "ready" && contacts.length === 1 ? <span>No one else has that tag.</span> : null}
+          <button
+            type="button"
+            className="underline decoration-border underline-offset-4 hover:text-foreground"
+            onClick={() => router.push("/")}
+          >
+            Show the whole deck
+          </button>
+        </p>
+      ) : null}
 
       {status === "ready" && due.length > 0 ? (
         <p className="mt-4 text-sm text-muted-foreground">
@@ -224,7 +249,7 @@ export function Rolodex() {
       {searchError ? (
         <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-destructive/40 px-4 py-3 text-sm" role="alert">
           <p>{searchError}</p>
-          <Button type="button" variant="outline" size="sm" onClick={() => void load(query, dueOnly)}>
+          <Button type="button" variant="outline" size="sm" onClick={() => void load(query, dueOnly, tag)}>
             Try again
           </Button>
         </div>
@@ -247,19 +272,23 @@ export function Rolodex() {
                 title="The deck didn’t open."
                 body={loadError || "Something went wrong while reading the cards."}
                 action={
-                  <Button type="button" onClick={() => void load(query, dueOnly)}>
+                  <Button type="button" onClick={() => void load(query, dueOnly, tag)}>
                     Try again
                   </Button>
                 }
               />
             ) : (
               <StageCard
-                title={emptyTitle(query, dueOnly)}
-                body={emptyBody(query, dueOnly, (deck?.directory.length ?? 0) === 0)}
+                title={emptyTitle(query, dueOnly, tag)}
+                body={emptyBody(query, dueOnly, tag, (deck?.directory.length ?? 0) === 0)}
                 action={
                   (deck?.directory.length ?? 0) === 0 ? (
                     <Button type="button" onClick={() => setAddOpen(true)}>
                       Add a card
+                    </Button>
+                  ) : tag ? (
+                    <Button type="button" variant="outline" onClick={() => router.push("/")}>
+                      Show the whole deck
                     </Button>
                   ) : dueOnly ? (
                     <Button
@@ -296,8 +325,11 @@ export function Rolodex() {
         onCreated={(contact) => {
           setAddOpen(false);
           preferId.current = contact.id;
-          if (query === "" && !dueOnly) void load("", false);
-          else {
+          const leavingTag = Boolean(tag || fromId);
+          if (leavingTag) router.push("/");
+          if (query === "" && !dueOnly) {
+            if (!leavingTag) void load("", false, "");
+          } else {
             setQuery("");
             setDueOnly(false);
           }
@@ -308,17 +340,22 @@ export function Rolodex() {
   );
 }
 
-function emptyTitle(query: string, dueOnly: boolean) {
+function emptyTitle(query: string, dueOnly: boolean, tag: string) {
+  if (tag && query.trim() && dueOnly) return `No due card tagged “${tag}” matches “${query.trim()}”.`;
+  if (tag && query.trim()) return `No card tagged “${tag}” matches “${query.trim()}”.`;
+  if (tag && dueOnly) return `Nobody tagged “${tag}” is due.`;
+  if (tag) return `Nobody is tagged “${tag}”.`;
   if (query.trim() && dueOnly) return `No due card matches “${query.trim()}”.`;
   if (query.trim()) return `No card matches “${query.trim()}”.`;
   if (dueOnly) return "Nobody is due.";
   return "The desk is clear.";
 }
 
-function emptyBody(query: string, dueOnly: boolean, deskEmpty: boolean) {
+function emptyBody(query: string, dueOnly: boolean, tag: string, deskEmpty: boolean) {
   if (deskEmpty) {
     return "Add someone the way you remember them: a name, a line about who they are, and a tag.";
   }
+  if (tag) return "The tag has to be on the card, not only written in a note.";
   if (query.trim()) {
     return "A shorter piece of the word still counts, so plast finds plastics.";
   }

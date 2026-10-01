@@ -144,10 +144,15 @@ function ReadingCard({
         {place ? <p className="mt-5 text-sm">{place}</p> : null}
 
         {contact.tags.length > 0 ? (
-          <ul className="mt-3 flex flex-wrap gap-1.5">
+          <ul className="mt-3 flex flex-wrap gap-2">
             {contact.tags.map((tag) => (
-              <li key={tag} className="rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">
-                {tag}
+              <li key={tag}>
+                <Link
+                  href={`/?tag=${encodeURIComponent(tag)}&from=${encodeURIComponent(contact.id)}`}
+                  className="inline-flex min-h-11 items-center rounded-full bg-secondary px-3 text-sm break-words text-secondary-foreground"
+                >
+                  {tag}
+                </Link>
               </li>
             ))}
           </ul>

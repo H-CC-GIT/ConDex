@@ -387,8 +387,18 @@ export function readCard(id: string): CardPage | null {
   };
 }
 
-export function listDeck(rawQuery: string, dueOnly: boolean): Deck {
+function tagged(alias: string) {
+  return `EXISTS (
+    SELECT 1 FROM contact_tags ct
+    JOIN tags t ON t.id = ct.tag_id
+    WHERE ct.contact_id = ${alias}.id AND t.name = ? COLLATE NOCASE
+  )`;
+}
+
+export function listDeck(rawQuery: string, dueOnly: boolean, rawTag = ""): Deck {
   if (rawQuery.length > 200) throw new DeckError(400, "That search is too long.");
+  const tag = rawTag.trim();
+  if (tag.length > 40) throw new DeckError(400, "Keep each tag under 40 characters.");
   const db = getDb();
   const today = todayISO();
   const typed = rawQuery.trim();
@@ -403,22 +413,25 @@ export function listDeck(rawQuery: string, dueOnly: boolean): Deck {
       FROM contacts_fts
       JOIN contacts c ON c.id = contacts_fts.contact_id
       WHERE contacts_fts MATCH ?
+      ${tag ? `AND ${tagged("c")}` : ""}
       ${dueOnly ? "AND c.follow_up_on IS NOT NULL AND c.follow_up_on <= ?" : ""}
       ORDER BY rank
     `;
-    const rows = (
-      dueOnly ? db.prepare(sql).all(match, today) : db.prepare(sql).all(match)
-    ) as { id: string }[];
+    const params = [match, ...(tag ? [tag] : []), ...(dueOnly ? [today] : [])];
+    const rows = db.prepare(sql).all(...params) as { id: string }[];
     ids = rows.map((row) => row.id);
   } else {
+    const where = [
+      tag ? tagged("c") : "",
+      dueOnly ? "c.follow_up_on IS NOT NULL AND c.follow_up_on <= ?" : "",
+    ].filter(Boolean);
     const sql = `
-      SELECT id FROM contacts
-      ${dueOnly ? "WHERE follow_up_on IS NOT NULL AND follow_up_on <= ?" : ""}
-      ORDER BY name COLLATE NOCASE
+      SELECT c.id AS id FROM contacts c
+      ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+      ORDER BY c.name COLLATE NOCASE
     `;
-    const rows = (dueOnly ? db.prepare(sql).all(today) : db.prepare(sql).all()) as {
-      id: string;
-    }[];
+    const params = [...(tag ? [tag] : []), ...(dueOnly ? [today] : [])];
+    const rows = db.prepare(sql).all(...params) as { id: string }[];
     ids = rows.map((row) => row.id);
   }
 
