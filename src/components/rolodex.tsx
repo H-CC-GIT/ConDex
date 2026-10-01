@@ -156,10 +156,7 @@ export function Rolodex({
 
       if (event.key === "Enter" && inSearch) {
         event.preventDefault();
-        if (active) {
-          if (book) saveBook(book);
-          router.push(`/cards/${active.id}`);
-        }
+        if (active) router.push(`/cards/${active.id}`);
         return;
       }
 
@@ -171,7 +168,7 @@ export function Rolodex({
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [addOpen, active, book, move, router]);
+  }, [addOpen, active, move, router]);
 
   function focusSearch() {
     requestAnimationFrame(() => searchRef.current?.focus());
