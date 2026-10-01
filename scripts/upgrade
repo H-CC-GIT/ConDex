@@ -1,0 +1,55 @@
+#!/bin/bash
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+#=================================================
+# STOP SYSTEMD SERVICE
+#=================================================
+ynh_script_progression "Stopping $app's systemd service..."
+
+ynh_systemctl --service="$app" --action="stop" --log_path="/var/log/$app/$app.log"
+
+#=================================================
+# DOWNLOAD, CHECK AND UNPACK SOURCE
+#=================================================
+ynh_script_progression "Upgrading source files..."
+
+# Replace the app code only. $data_dir is outside $install_dir and is not touched,
+# so the SQLite file and photos survive the upgrade.
+ynh_safe_rm "$install_dir"
+install_sources
+
+#=================================================
+# BUILD APP
+#=================================================
+ynh_script_progression "Building ConDex..."
+
+ensure_data_dirs
+build_condex
+
+#=================================================
+# REAPPLY SYSTEM CONFIGURATION
+#=================================================
+ynh_script_progression "Upgrading system configurations related to $app..."
+
+ynh_config_add_nginx
+
+ynh_config_add_systemd
+
+yunohost service add "$app" --description="Private rolodex" --log="/var/log/$app/$app.log"
+
+ynh_config_add_logrotate
+
+#=================================================
+# START SYSTEMD SERVICE
+#=================================================
+ynh_script_progression "Starting $app's systemd service..."
+
+ynh_systemctl --service="$app" --action="start" --wait_until="Ready" --log_path="/var/log/$app/$app.log"
+
+#=================================================
+# END OF SCRIPT
+#=================================================
+
+ynh_script_progression "Upgrade of $app completed"

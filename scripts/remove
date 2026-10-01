@@ -1,0 +1,28 @@
+#!/bin/bash
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+#=================================================
+# REMOVE SYSTEM CONFIGURATION
+#=================================================
+ynh_script_progression "Removing system configurations related to $app..."
+
+ynh_config_remove_logrotate
+
+if ynh_hide_warnings yunohost service status "$app" >/dev/null; then
+    yunohost service remove "$app"
+fi
+
+ynh_config_remove_systemd
+
+ynh_config_remove_nginx
+
+# The data directory (SQLite and photos) is removed by YunoHost only when
+# the app is removed with --purge. A plain remove leaves the book in place.
+
+#=================================================
+# END OF SCRIPT
+#=================================================
+
+ynh_script_progression "Removal of $app completed"

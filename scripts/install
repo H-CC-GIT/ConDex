@@ -1,0 +1,47 @@
+#!/bin/bash
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+#=================================================
+# DOWNLOAD, CHECK AND UNPACK SOURCE
+#=================================================
+ynh_script_progression "Setting up source files..."
+
+install_sources
+
+#=================================================
+# BUILD APP
+#=================================================
+ynh_script_progression "Building ConDex..."
+
+# The book and photos live in the data directory, outside the app code,
+# so a later upgrade can replace the install dir without wiping them.
+ensure_data_dirs
+build_condex
+
+#=================================================
+# SYSTEM CONFIGURATION
+#=================================================
+ynh_script_progression "Adding system configurations related to $app..."
+
+ynh_config_add_nginx
+
+ynh_config_add_systemd
+
+yunohost service add "$app" --description="Private rolodex" --log="/var/log/$app/$app.log"
+
+ynh_config_add_logrotate
+
+#=================================================
+# START SYSTEMD SERVICE
+#=================================================
+ynh_script_progression "Starting $app's systemd service..."
+
+ynh_systemctl --service="$app" --action="start" --wait_until="Ready" --log_path="/var/log/$app/$app.log"
+
+#=================================================
+# END OF SCRIPT
+#=================================================
+
+ynh_script_progression "Installation of $app completed"

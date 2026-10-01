@@ -1,0 +1,31 @@
+#!/bin/bash
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+#=================================================
+# MODIFY URL IN NGINX CONF
+#=================================================
+ynh_script_progression "Updating NGINX web server configuration..."
+
+ynh_config_change_url_nginx
+
+#=================================================
+# REBUILD WHEN THE PATH CHANGES
+#=================================================
+
+if [ "${change_path:-0}" -eq 1 ]; then
+    ynh_script_progression "Rebuilding ConDex for the new path..."
+    ynh_systemctl --service="$app" --action="stop" --log_path="/var/log/$app/$app.log"
+    # $path is already the new path. The data directory is left as it is.
+    build_condex
+    ynh_systemctl --service="$app" --action="start" --wait_until="Ready" --log_path="/var/log/$app/$app.log"
+fi
+
+ynh_systemctl --service=nginx --action=reload
+
+#=================================================
+# END OF SCRIPT
+#=================================================
+
+ynh_script_progression "Change of URL completed for $app"

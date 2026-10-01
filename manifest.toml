@@ -1,0 +1,57 @@
+#:schema https://raw.githubusercontent.com/YunoHost/apps/main/schemas/manifest.v2.schema.json
+
+packaging_format = 2
+
+id = "condex"
+name = "ConDex"
+description.en = "Private rolodex that finds people the way you remember them"
+
+version = "0.1.0~ynh1"
+
+maintainers = []
+
+[upstream]
+license = "MIT"
+
+[integration]
+yunohost = ">= 12.1.17"
+helpers_version = "2.1"
+architectures = "all"
+multi_instance = false
+ldap = "not_relevant"
+sso = true
+disk = "50M"
+ram.build = "2G"
+ram.runtime = "256M"
+
+[install]
+    [install.domain]
+    type = "domain"
+
+    [install.path]
+    type = "path"
+    default = "/condex"
+
+    [install.init_main_permission]
+    type = "group"
+    default = "all_users"
+
+[resources]
+    [resources.system_user]
+
+    [resources.install_dir]
+
+    [resources.data_dir]
+
+    [resources.permissions]
+    main.url = "/"
+    main.show_tile = true
+    main.protected = true
+
+    [resources.ports]
+
+    [resources.apt]
+    packages = "build-essential, python3, sqlite3"
+
+    [resources.nodejs]
+    version = "22"

@@ -1,0 +1,9 @@
+/var/log/__APP__/*.log {
+    daily
+    missingok
+    rotate 12
+    compress
+    delaycompress
+    notifempty
+    copytruncate
+}
