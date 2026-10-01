@@ -3,13 +3,16 @@ import fs from "fs";
 import path from "path";
 import { apiUrl } from "./base-path";
 import { getDb } from "./db";
+import { queryTokens } from "./search-text";
 import { dataDir, photosDir } from "./paths";
 import type {
+  CardPage,
   Contact,
   ContactInput,
   Deck,
   DirectoryEntry,
   DueEntry,
+  RelatedCard,
   Meeting,
   MeetingInput,
   PointInput,
@@ -256,6 +259,132 @@ function hydrate(ids: string[]): Contact[] {
 
 export function getContact(id: string) {
   return hydrate([id])[0] ?? null;
+}
+
+const WHO_STOP = new Set([
+  "a",
+  "an",
+  "and",
+  "are",
+  "at",
+  "be",
+  "been",
+  "by",
+  "for",
+  "from",
+  "in",
+  "into",
+  "is",
+  "met",
+  "of",
+  "on",
+  "or",
+  "over",
+  "that",
+  "the",
+  "their",
+  "them",
+  "these",
+  "they",
+  "this",
+  "those",
+  "to",
+  "was",
+  "were",
+  "who",
+  "with",
+  "you",
+  "your",
+]);
+
+function whoWords(who: string) {
+  const words: { fold: string; label: string }[] = [];
+  const seen = new Set<string>();
+  for (const raw of who.trim().split(/\s+/)) {
+    const fold = queryTokens(raw)[0];
+    if (!fold || fold.length < 4 || WHO_STOP.has(fold) || seen.has(fold)) continue;
+    seen.add(fold);
+    const label = raw.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
+    words.push({ fold, label: label || fold });
+  }
+  return words;
+}
+
+export function relatedTo(contact: Contact): RelatedCard[] {
+  const db = getDb();
+  const chosen = new Set<string>([contact.id]);
+  const matches: { id: string; reason: string }[] = [];
+
+  if (contact.introducedById && contact.introducedById !== contact.id) {
+    chosen.add(contact.introducedById);
+    matches.push({ id: contact.introducedById, reason: "Introduced by" });
+  }
+
+  const introduced = db
+    .prepare(
+      `SELECT id FROM contacts
+       WHERE introduced_by_id = ? AND id != ?
+       ORDER BY name COLLATE NOCASE`,
+    )
+    .all(contact.id, contact.id) as { id: string }[];
+  for (const row of introduced) {
+    if (chosen.has(row.id)) continue;
+    chosen.add(row.id);
+    matches.push({ id: row.id, reason: "Introduced" });
+  }
+
+  const tagRows = db
+    .prepare(
+      `SELECT c.id AS id, t.name AS tag
+       FROM contacts c
+       JOIN contact_tags ct ON ct.contact_id = c.id
+       JOIN tags t ON t.id = ct.tag_id
+       JOIN contact_tags mine ON mine.tag_id = t.id AND mine.contact_id = ?
+       WHERE c.id != ?
+       ORDER BY t.name COLLATE NOCASE, c.name COLLATE NOCASE`,
+    )
+    .all(contact.id, contact.id) as { id: string; tag: string }[];
+  for (const row of tagRows) {
+    if (chosen.has(row.id)) continue;
+    chosen.add(row.id);
+    matches.push({ id: row.id, reason: row.tag });
+  }
+
+  const words = whoWords(contact.who);
+  if (words.length) {
+    const wanted = new Map(words.map((word) => [word.fold, word.label]));
+    const others = db
+      .prepare("SELECT id, who FROM contacts WHERE id != ? ORDER BY name COLLATE NOCASE")
+      .all(contact.id) as { id: string; who: string }[];
+    for (const other of others) {
+      if (chosen.has(other.id)) continue;
+      const hit = whoWords(other.who).find((word) => wanted.has(word.fold));
+      if (!hit) continue;
+      chosen.add(other.id);
+      matches.push({ id: other.id, reason: wanted.get(hit.fold) ?? hit.label });
+    }
+  }
+
+  const capped = matches.slice(0, 6);
+  const people = new Map(hydrate(capped.map((match) => match.id)).map((person) => [person.id, person]));
+  return capped.flatMap((match) => {
+    const person = people.get(match.id);
+    return person ? [{ reason: match.reason, contact: person }] : [];
+  });
+}
+
+export function readCard(id: string): CardPage | null {
+  const contact = getContact(id);
+  if (!contact) return null;
+  const db = getDb();
+  return {
+    today: todayISO(),
+    contact,
+    related: relatedTo(contact),
+    directory: db
+      .prepare("SELECT id, name FROM contacts ORDER BY name COLLATE NOCASE")
+      .all() as DirectoryEntry[],
+  };
 }
 
 export function listDeck(rawQuery: string, dueOnly: boolean): Deck {

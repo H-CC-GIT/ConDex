@@ -1,14 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ContactDialog } from "@/components/contact-dialog";
+import { useRouter } from "next/navigation";
 import { DeckMenu } from "@/components/deck-menu";
 import { QuickAddDialog } from "@/components/quick-add-dialog";
 import { RolodexWheel } from "@/components/rolodex-wheel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { fetchDeck } from "@/lib/deck-client";
-import type { Contact, Deck } from "@/lib/types";
+import type { Deck } from "@/lib/types";
 
 export function Rolodex() {
   const [query, setQuery] = useState("");
@@ -20,7 +20,7 @@ export function Rolodex() {
   const [pending, setPending] = useState(false);
   const [selected, setSelected] = useState(0);
   const [addOpen, setAddOpen] = useState(false);
-  const [opened, setOpened] = useState<Contact | null>(null);
+  const router = useRouter();
   const searchRef = useRef<HTMLInputElement>(null);
   const requestId = useRef(0);
   const seenDeck = useRef(false);
@@ -94,7 +94,7 @@ export function Rolodex() {
         target?.tagName === "SELECT" ||
         Boolean(target?.isContentEditable);
       const inSearch = target === searchRef.current;
-      const dialogOpen = addOpen || opened !== null;
+      const dialogOpen = addOpen;
 
       if (event.key === "Escape" && !dialogOpen && inSearch) {
         searchRef.current?.blur();
@@ -115,7 +115,7 @@ export function Rolodex() {
 
       if (event.key === "Enter" && inSearch) {
         event.preventDefault();
-        if (active) setOpened(active);
+        if (active) router.push(`/cards/${active.id}`);
         return;
       }
 
@@ -127,7 +127,7 @@ export function Rolodex() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [addOpen, opened, active, move]);
+  }, [addOpen, active, move, router]);
 
   function focusSearch() {
     requestAnimationFrame(() => searchRef.current?.focus());
@@ -236,7 +236,7 @@ export function Rolodex() {
           query={query}
           today={today}
           onOpen={() => {
-            if (active) setOpened(active);
+            if (active) router.push(`/cards/${active.id}`);
           }}
           onMove={move}
           placeholder={
@@ -302,23 +302,6 @@ export function Rolodex() {
             setDueOnly(false);
           }
           focusSearch();
-        }}
-      />
-      <ContactDialog
-        contact={opened}
-        directory={deck?.directory ?? []}
-        onClose={() => {
-          setOpened(null);
-          focusSearch();
-        }}
-        onSaved={(contact) => {
-          setOpened(contact);
-          void load(query, dueOnly);
-        }}
-        onDeleted={() => {
-          setOpened(null);
-          focusSearch();
-          void load(query, dueOnly);
         }}
       />
     </div>

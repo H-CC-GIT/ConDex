@@ -1,5 +1,5 @@
 import { apiUrl } from "./base-path";
-import type { Contact, ContactInput, Deck } from "./types";
+import type { CardPage, Contact, ContactInput, Deck } from "./types";
 
 async function readError(response: Response) {
   const data = (await response.json().catch(() => null)) as { error?: unknown } | null;
@@ -20,6 +20,12 @@ export function fetchDeck(query: string, dueOnly: boolean) {
   const suffix = queryString ? `?${queryString}` : "";
   return fetch(apiUrl(`/api/contacts${suffix}`), { cache: "no-store" }).then((response) =>
     send<Deck>(response),
+  );
+}
+
+export function fetchCard(id: string) {
+  return fetch(apiUrl(`/api/contacts/${id}`), { cache: "no-store" }).then((response) =>
+    send<CardPage>(response),
   );
 }
 

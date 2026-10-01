@@ -33,7 +33,7 @@ export function CardFace({
       aria-selected
       tabIndex={-1}
       onClick={onOpen}
-      className="paper relative flex min-h-[22rem] w-full cursor-pointer flex-col rounded-2xl border border-border bg-card px-5 py-5 text-left text-card-foreground shadow-[0_28px_50px_-28px_rgba(0,0,0,0.9)]"
+      className="card-sheet paper relative flex min-h-[22rem] w-full cursor-pointer flex-col rounded-2xl border border-border bg-card px-5 py-5 text-left text-card-foreground shadow-[0_28px_50px_-28px_rgba(0,0,0,0.9)]"
     >
       <span
         aria-hidden
@@ -41,9 +41,11 @@ export function CardFace({
       >
         {tab}
       </span>
-      <div className="flex items-start gap-3">
-        <Portrait contact={contact} />
-        <div className="min-w-0 flex-1 pr-2">
+      <div className="card-depth flex items-start gap-3">
+        <div className="card-photo shrink-0">
+          <Portrait contact={contact} />
+        </div>
+        <div className="card-type min-w-0 flex-1 pr-2">
           <h2 className="font-display text-2xl leading-tight font-medium tracking-tight">
             <Highlight text={contact.name} query={query} />
           </h2>

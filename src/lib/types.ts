@@ -52,6 +52,18 @@ export type Deck = {
   due: DueEntry[];
 };
 
+export type RelatedCard = {
+  reason: string;
+  contact: Contact;
+};
+
+export type CardPage = {
+  today: string;
+  contact: Contact;
+  related: RelatedCard[];
+  directory: DirectoryEntry[];
+};
+
 export type PointInput = {
   kind: PointKind;
   value: string;

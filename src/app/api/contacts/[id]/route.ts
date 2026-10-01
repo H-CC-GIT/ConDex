@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { deleteContact, getContact, updateContact } from "@/lib/contacts";
+import { deleteContact, readCard, updateContact } from "@/lib/contacts";
 import { fail, isUuid } from "@/lib/http";
 import type { ContactInput } from "@/lib/types";
 
@@ -14,11 +14,11 @@ export async function GET(_request: Request, context: Context) {
     if (!isUuid(id)) {
       return NextResponse.json({ error: "That card is no longer in the deck." }, { status: 404 });
     }
-    const contact = getContact(id);
-    if (!contact) {
+    const page = readCard(id);
+    if (!page) {
       return NextResponse.json({ error: "That card is no longer in the deck." }, { status: 404 });
     }
-    return NextResponse.json(contact);
+    return NextResponse.json(page);
   } catch (error) {
     return fail(error);
   }

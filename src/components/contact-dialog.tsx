@@ -54,12 +54,16 @@ export function ContactDialog({
   onClose,
   onSaved,
   onDeleted,
+  onDone,
+  inline = false,
 }: {
   contact: Contact | null;
   directory: DirectoryEntry[];
   onClose: () => void;
   onSaved: (contact: Contact) => void;
   onDeleted: (id: string) => void;
+  onDone?: () => void;
+  inline?: boolean;
 }) {
   const contactId = contact?.id ?? null;
   const [formId, setFormId] = useState<string | null>(null);
@@ -103,6 +107,7 @@ export function ContactDialog({
       });
       setDraft(fromContact(saved));
       onSaved(saved);
+      onDone?.();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The card could not be saved.");
     } finally {
@@ -152,18 +157,24 @@ export function ContactDialog({
   }
 
   const others = directory.filter((entry) => entry.id !== contact?.id);
-
-  return (
-    <Dialog open={Boolean(contact)} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex max-h-[min(92dvh,900px)] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl max-sm:h-[100dvh] max-sm:max-h-none max-sm:max-w-none max-sm:rounded-none max-sm:top-0 max-sm:left-0 max-sm:translate-x-0 max-sm:translate-y-0">
-        {contact && draft ? (
+  const form =
+    contact && draft ? (
           <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
-            <DialogHeader className="px-5 pt-5 pr-12">
-              <DialogTitle className="font-display text-2xl">{draft.name || contact.name}</DialogTitle>
-              <DialogDescription>
-                The full card: how you reach them, how you met, and who introduced you.
-              </DialogDescription>
-            </DialogHeader>
+            {inline ? (
+              <div className="px-5 pt-5">
+                <h2 className="font-display text-2xl font-medium">{draft.name || contact.name}</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  How you reach them, how you met, and who introduced you.
+                </p>
+              </div>
+            ) : (
+              <DialogHeader className="px-5 pt-5 pr-12">
+                <DialogTitle className="font-display text-2xl">{draft.name || contact.name}</DialogTitle>
+                <DialogDescription>
+                  The full card: how you reach them, how you met, and who introduced you.
+                </DialogDescription>
+              </DialogHeader>
+            )}
             <div className="grid min-h-0 flex-1 gap-6 overflow-y-auto px-5 py-4 md:grid-cols-2">
               <div className="grid content-start gap-4">
                 <div className="flex items-center gap-3">
@@ -464,13 +475,35 @@ export function ContactDialog({
                     {error}
                   </p>
                 ) : null}
-                <Button type="submit" disabled={saving}>
-                  {saving ? "Saving…" : "Save card"}
-                </Button>
+                <div className="flex flex-wrap justify-end gap-2">
+                  {inline ? (
+                    <Button type="button" variant="outline" onClick={onClose}>
+                      Back to the card
+                    </Button>
+                  ) : null}
+                  <Button type="submit" disabled={saving}>
+                    {saving ? "Saving…" : "Save card"}
+                  </Button>
+                </div>
               </div>
             </div>
           </form>
-        ) : null}
+    ) : null;
+
+  if (!form) return null;
+
+  if (inline) {
+    return (
+      <div className="paper overflow-hidden rounded-2xl border border-border bg-card text-card-foreground shadow-[0_28px_50px_-28px_rgba(0,0,0,0.9)]">
+        {form}
+      </div>
+    );
+  }
+
+  return (
+    <Dialog open={Boolean(contact)} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="flex max-h-[min(92dvh,900px)] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl max-sm:h-[100dvh] max-sm:max-h-none max-sm:max-w-none max-sm:rounded-none max-sm:top-0 max-sm:left-0 max-sm:translate-x-0 max-sm:translate-y-0">
+        {form}
       </DialogContent>
     </Dialog>
   );

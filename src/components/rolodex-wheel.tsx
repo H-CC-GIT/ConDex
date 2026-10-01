@@ -88,7 +88,7 @@ export function RolodexWheel({
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
-        <div className="relative" style={{ perspective: "1100px" }}>
+        <div className="wheel-stage relative">
         {stacked ? (
           <>
             <div
@@ -129,6 +129,7 @@ export function RolodexWheel({
             )}
           </div>
         </div>
+        <div aria-hidden data-phase={phase === "raised" ? "flat" : phase} className="wheel-shadow" />
         </div>
 
         <div
