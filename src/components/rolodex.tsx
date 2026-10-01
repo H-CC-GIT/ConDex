@@ -139,7 +139,7 @@ export function Rolodex() {
   const today = deck?.today ?? "";
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-6xl flex-1 flex-col px-4 py-6 md:px-8 md:py-10">
+    <div className="mx-auto flex min-h-full w-full max-w-6xl flex-1 flex-col overflow-x-clip py-6 pl-4 pr-8 md:px-8 md:py-10">
       <header className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div className="min-w-0">
           <p className="text-xs tracking-[0.18em] text-muted-foreground uppercase">Personal rolodex</p>
@@ -230,16 +230,13 @@ export function Rolodex() {
         </div>
       ) : null}
 
-      <main className="mt-6 flex min-h-0 flex-1 flex-col" aria-busy={status === "loading" || pending}>
+      <main className="mt-6 flex min-h-0 flex-1 flex-col overflow-x-clip" aria-busy={status === "loading" || pending}>
         <RolodexWheel
-          contact={status === "ready" ? (active ?? null) : null}
+          contacts={status === "ready" ? contacts : []}
           index={safeSelected}
-          count={status === "ready" ? count : 0}
           query={query}
           today={today}
-          onOpen={() => {
-            if (active) router.push(`/cards/${active.id}`);
-          }}
+          onOpen={(id) => router.push(`/cards/${id}`)}
           onMove={move}
           nudge={nudge}
           placeholder={

@@ -5,9 +5,8 @@ import { CardFace } from "@/components/card-face";
 import type { Contact } from "@/lib/types";
 
 export function RolodexWheel({
-  contact,
+  contacts,
   index,
-  count,
   query,
   today,
   nudge,
@@ -15,16 +14,17 @@ export function RolodexWheel({
   onMove,
   placeholder,
 }: {
-  contact: Contact | null;
+  contacts: Contact[];
   index: number;
-  count: number;
   query: string;
   today: string;
   nudge: number;
-  onOpen: () => void;
+  onOpen: (id: string) => void;
   onMove: (step: number) => void;
   placeholder?: ReactNode;
 }) {
+  const contact = contacts[index] ?? null;
+  const count = contacts.length;
   const [shown, setShown] = useState<Contact | null>(contact);
   const [leaving, setLeaving] = useState<Contact | null>(null);
   const [seenNudge, setSeenNudge] = useState(nudge);
@@ -78,47 +78,34 @@ export function RolodexWheel({
     onMove(delta < 0 ? 1 : -1);
   }
 
-  const stacked = count > 1;
-  const open = () => {
+  const openHero = () => {
     if (swiped.current) {
       swiped.current = false;
       return;
     }
-    onOpen();
+    if (shown) onOpen(shown.id);
   };
 
+  const others = contacts.filter((_, item) => item !== index);
+
   return (
-    <div className="mx-auto flex w-full max-w-[36rem] flex-col items-center">
-      <div
-        id="card-wheel"
-        role="listbox"
-        aria-label="Matching cards"
-        className="relative w-full px-8 pt-4 pb-1"
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-      >
-        <div className="relative">
-          {stacked ? (
-            <>
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-x-6 top-3 h-full rounded-xl border border-white/15 bg-white/20"
-              />
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-x-3 top-1.5 h-full rounded-xl border border-white/30 bg-white/50"
-              />
-            </>
-          ) : null}
-          <div className="relative -translate-y-2">
+    <div
+      id="card-wheel"
+      role="listbox"
+      aria-label="Matching cards"
+      className="grid w-full grid-cols-1 gap-x-6 gap-y-8 md:grid-cols-2"
+    >
+      <div className="min-w-0">
+        <div className="overflow-x-clip" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+          <div className="relative pr-7">
             {leaving ? (
               <div
                 aria-hidden
-                className="card-slide pointer-events-none absolute inset-0"
+                className="card-slide pointer-events-none absolute inset-y-0 right-7 left-0"
                 data-motion="out"
                 data-dir={dir}
               >
-                <CardFace contact={leaving} query={query} today={today} onOpen={() => {}} />
+                <CardFace contact={leaving} query={query} today={today} onOpen={() => {}} marker={false} />
               </div>
             ) : null}
             <div
@@ -128,28 +115,34 @@ export function RolodexWheel({
               onAnimationEnd={onSlideEnd}
             >
               {shown ? (
-                <CardFace contact={shown} query={query} today={today} onOpen={open} />
+                <CardFace contact={shown} query={query} today={today} onOpen={openHero} selected />
               ) : (
                 placeholder
               )}
             </div>
           </div>
         </div>
-        <div
-          aria-hidden
-          className="pointer-events-none relative z-10 mx-auto mt-3 h-1.5 w-[min(88%,24rem)] rounded-full bg-white/25 shadow-[0_8px_16px_-10px_rgba(0,0,0,0.8)]"
-        />
+        {count > 0 ? (
+          <p className="mt-3 text-sm tabular-nums tracking-wide text-foreground/80" aria-live="polite">
+            <span className="text-accent">{index + 1}</span>
+            <span className="px-1.5 text-foreground/40">/</span>
+            {count}
+          </p>
+        ) : (
+          <p className="mt-3 h-5" aria-hidden />
+        )}
       </div>
-
-      {count > 0 ? (
-        <p className="mt-3 text-sm tabular-nums tracking-wide text-foreground/80" aria-live="polite">
-          <span className="text-accent">{index + 1}</span>
-          <span className="px-1.5 text-foreground/40">/</span>
-          {count}
-        </p>
-      ) : (
-        <p className="mt-3 h-5" aria-hidden />
-      )}
+      {others.map((person) => (
+        <div key={person.id} className="min-w-0 pr-7">
+          <CardFace
+            contact={person}
+            query={query}
+            today={today}
+            onOpen={() => onOpen(person.id)}
+            selected={false}
+          />
+        </div>
+      ))}
     </div>
   );
 }

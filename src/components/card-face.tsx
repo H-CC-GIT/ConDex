@@ -8,11 +8,15 @@ export function CardFace({
   query,
   today,
   onOpen,
+  selected = true,
+  marker = true,
 }: {
   contact: Contact;
   query: string;
   today: string;
   onOpen: () => void;
+  selected?: boolean;
+  marker?: boolean;
 }) {
   const place = [contact.organization, contact.city].filter(Boolean).join(" · ");
   const meetingExcerpt = query.trim()
@@ -28,9 +32,9 @@ export function CardFace({
 
   return (
     <article
-      id={`card-${contact.id}`}
-      role="option"
-      aria-selected
+      id={marker ? `card-${contact.id}` : undefined}
+      role={marker ? "option" : undefined}
+      aria-selected={marker ? selected : undefined}
       tabIndex={-1}
       onClick={onOpen}
       className="paper relative aspect-[7/4] w-full cursor-pointer rounded-xl border border-border bg-card text-left text-card-foreground shadow-[0_22px_40px_-24px_rgba(0,0,0,0.9)]"
