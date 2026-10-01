@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DeckMenu } from "@/components/deck-menu";
+import { NotesSwitch } from "@/components/notes-switch";
 import { QuickAddDialog } from "@/components/quick-add-dialog";
 import { RolodexWheel } from "@/components/rolodex-wheel";
 import { Button } from "@/components/ui/button";
@@ -16,10 +17,12 @@ export function Rolodex({
   tag = "",
   fromId = "",
   initialBook = null,
+  showNotes = false,
 }: {
   tag?: string;
   fromId?: string;
   initialBook?: Deck | null;
+  showNotes?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [dueOnly, setDueOnly] = useState(false);
@@ -30,12 +33,19 @@ export function Rolodex({
   const [selected, setSelected] = useState(() => selectedIn(initialBook, tag, fromId));
   const [addOpen, setAddOpen] = useState(false);
   const [nudge, setNudge] = useState(0);
+  const [serverNotes, setServerNotes] = useState(showNotes);
+  const [notesOn, setNotesOn] = useState(showNotes);
   const router = useRouter();
   const searchRef = useRef<HTMLInputElement>(null);
   const requestId = useRef(0);
   const preferId = useRef<string | null>(null);
   const pinFor = useRef<string | null>(fromId || null);
   const pinKey = useRef(`${tag}\n${fromId}`);
+
+  if (showNotes !== serverNotes) {
+    setServerNotes(showNotes);
+    setNotesOn(showNotes);
+  }
 
   const load = useCallback(async () => {
     const id = ++requestId.current;
@@ -188,6 +198,7 @@ export function Rolodex({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 self-start md:self-end">
+          <NotesSwitch checked={notesOn} onCheckedChange={setNotesOn} />
           <Button type="button" onClick={() => setAddOpen(true)}>
             Add a card
             <kbd className="rounded bg-primary-foreground/15 px-1.5 py-0.5 text-[0.7rem]">Alt N</kbd>
@@ -297,6 +308,7 @@ export function Rolodex({
           }}
           onMove={move}
           nudge={nudge}
+          showNotes={notesOn}
           placeholder={
             status === "loading" ? (
               <SkeletonCard />

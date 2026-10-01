@@ -10,6 +10,7 @@ export function RolodexWheel({
   query,
   today,
   nudge,
+  showNotes,
   onOpen,
   onMove,
   placeholder,
@@ -19,6 +20,7 @@ export function RolodexWheel({
   query: string;
   today: string;
   nudge: number;
+  showNotes: boolean;
   onOpen: (id: string) => void;
   onMove: (step: number) => void;
   placeholder?: ReactNode;
@@ -105,7 +107,14 @@ export function RolodexWheel({
                 data-motion="out"
                 data-dir={dir}
               >
-                <CardFace contact={leaving} query={query} today={today} onOpen={() => {}} marker={false} />
+                <CardFace
+                  contact={leaving}
+                  query={query}
+                  today={today}
+                  onOpen={() => {}}
+                  marker={false}
+                  showNotes={showNotes}
+                />
               </div>
             ) : null}
             <div
@@ -115,7 +124,14 @@ export function RolodexWheel({
               onAnimationEnd={onSlideEnd}
             >
               {shown ? (
-                <CardFace contact={shown} query={query} today={today} onOpen={openHero} selected />
+                <CardFace
+                  contact={shown}
+                  query={query}
+                  today={today}
+                  onOpen={openHero}
+                  selected
+                  showNotes={showNotes}
+                />
               ) : (
                 placeholder
               )}
@@ -140,6 +156,7 @@ export function RolodexWheel({
             today={today}
             onOpen={() => onOpen(person.id)}
             selected={false}
+            showNotes={showNotes}
           />
         </div>
       ))}

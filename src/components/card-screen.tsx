@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { NotesSwitch } from "@/components/notes-switch";
 import { Button } from "@/components/ui/button";
 import { fetchCard } from "@/lib/deck-client";
 import { forgetContact, rememberContact, rememberedCard } from "@/lib/deck-cache";
@@ -16,8 +17,10 @@ const ContactDialog = dynamic(
   { loading: () => <p className="mt-6 text-sm text-muted-foreground">Opening the form…</p> },
 );
 
-export function CardScreen({ id }: { id: string }) {
+export function CardScreen({ id, showNotes = false }: { id: string; showNotes?: boolean }) {
   const router = useRouter();
+  const [serverNotes, setServerNotes] = useState(showNotes);
+  const [notesOn, setNotesOn] = useState(showNotes);
   const [seenId, setSeenId] = useState(id);
   const [page, setPage] = useState<CardPage | null>(() => rememberedCard(id));
   const [status, setStatus] = useState<"loading" | "ready" | "error">(() =>
@@ -26,6 +29,11 @@ export function CardScreen({ id }: { id: string }) {
   const [related, setRelated] = useState<RelatedCard[] | null>(null);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState(false);
+
+  if (showNotes !== serverNotes) {
+    setServerNotes(showNotes);
+    setNotesOn(showNotes);
+  }
 
   if (seenId !== id) {
     const next = rememberedCard(id);
@@ -74,12 +82,15 @@ export function CardScreen({ id }: { id: string }) {
 
   return (
     <div className="mx-auto flex min-h-full w-full max-w-3xl flex-1 flex-col px-4 py-6 md:px-8 md:py-10">
-      <Link
-        href="/"
-        className="text-sm text-muted-foreground underline decoration-border underline-offset-4 hover:text-foreground"
-      >
-        Back to the deck
-      </Link>
+      <div className="flex items-center justify-between gap-3">
+        <Link
+          href="/"
+          className="text-sm text-muted-foreground underline decoration-border underline-offset-4 hover:text-foreground"
+        >
+          Back to the deck
+        </Link>
+        <NotesSwitch checked={notesOn} onCheckedChange={setNotesOn} />
+      </div>
 
       {status === "loading" ? <CardSkeleton /> : null}
       {status === "error" ? (
@@ -112,7 +123,12 @@ export function CardScreen({ id }: { id: string }) {
           </div>
         ) : (
           <div className="mt-6 flex flex-col gap-10">
-            <ReadingCard contact={page.contact} today={page.today} onEdit={() => setEditing(true)} />
+            <ReadingCard
+              contact={page.contact}
+              today={page.today}
+              showNotes={notesOn}
+              onEdit={() => setEditing(true)}
+            />
             {related ? <Related related={related} /> : null}
           </div>
         )
@@ -124,10 +140,12 @@ export function CardScreen({ id }: { id: string }) {
 function ReadingCard({
   contact,
   today,
+  showNotes,
   onEdit,
 }: {
   contact: Contact;
   today: string;
+  showNotes: boolean;
   onEdit: () => void;
 }) {
   const place = [contact.organization, contact.city].filter(Boolean).join(" · ");
@@ -221,7 +239,7 @@ function ReadingCard({
           </section>
         ) : null}
 
-        {contact.notes.trim() ? (
+        {showNotes && contact.notes.trim() ? (
           <section className="mt-5 border-t border-border pt-4">
             <h2 className="text-xs tracking-[0.14em] text-muted-foreground uppercase">Notes</h2>
             <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">{contact.notes}</p>

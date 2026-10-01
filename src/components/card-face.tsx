@@ -10,6 +10,7 @@ export function CardFace({
   onOpen,
   selected = true,
   marker = true,
+  showNotes = false,
 }: {
   contact: Contact;
   query: string;
@@ -17,6 +18,7 @@ export function CardFace({
   onOpen: () => void;
   selected?: boolean;
   marker?: boolean;
+  showNotes?: boolean;
 }) {
   const place = [contact.organization, contact.city].filter(Boolean).join(" · ");
   const meetingExcerpt = query.trim()
@@ -25,7 +27,8 @@ export function CardFace({
         query,
       )
     : null;
-  const notesExcerpt = !meetingExcerpt && query.trim() ? matchExcerpt(contact.notes, query) : null;
+  const notesExcerpt =
+    showNotes && !meetingExcerpt && query.trim() ? matchExcerpt(contact.notes, query) : null;
   const excerpt = meetingExcerpt ?? notesExcerpt;
   const due = Boolean(contact.followUpOn && contact.followUpOn <= today);
   const tab = contact.name.trim().charAt(0).toUpperCase() || "·";
