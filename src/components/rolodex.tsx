@@ -336,9 +336,9 @@ function StageCard({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="paper flex min-h-[22rem] w-full flex-col justify-center rounded-2xl border border-border bg-card px-6 py-8 text-card-foreground shadow-[0_28px_50px_-28px_rgba(0,0,0,0.9)]">
-      <h2 className="font-display text-2xl font-medium wrap-anywhere">{title}</h2>
-      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
+    <div className="paper flex aspect-[7/4] w-full flex-col justify-center overflow-hidden rounded-xl border border-border bg-card px-5 py-4 text-card-foreground shadow-[0_22px_40px_-24px_rgba(0,0,0,0.9)]">
+      <h2 className="font-display line-clamp-3 text-2xl font-medium wrap-anywhere">{title}</h2>
+      <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
       {action ? <div className="mt-5">{action}</div> : null}
     </div>
   );
@@ -347,12 +347,12 @@ function StageCard({
 function SkeletonCard() {
   return (
     <div
-      className="paper flex min-h-[22rem] w-full flex-col gap-4 rounded-2xl border border-border bg-card px-6 py-8"
+      className="paper flex aspect-[7/4] w-full flex-col justify-center gap-3 overflow-hidden rounded-xl border border-border bg-card px-5 py-4"
       aria-hidden
     >
       <div className="h-6 w-2/3 rounded-md bg-foreground/10" />
       <div className="h-4 w-1/2 rounded-md bg-foreground/10" />
-      <div className="mt-8 h-4 w-full rounded-md bg-foreground/10" />
+      <div className="mt-2 h-4 w-full rounded-md bg-foreground/10" />
       <div className="h-4 w-5/6 rounded-md bg-foreground/10" />
     </div>
   );

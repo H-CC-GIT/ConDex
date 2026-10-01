@@ -287,20 +287,22 @@ function Related({ related }: { related: RelatedCard[] }) {
       ) : (
         <ul className="mt-4 flex gap-3 overflow-x-auto pr-8 pb-2">
           {related.map((match) => (
-            <li key={match.contact.id} className="w-52 shrink-0">
+            <li key={match.contact.id} className="w-64 shrink-0">
               <Link href={`/cards/${match.contact.id}`} className="block">
-                <article className="paper relative rounded-2xl border border-border bg-card px-3 py-3 text-card-foreground">
+                <article className="paper relative aspect-[7/4] rounded-xl border border-border bg-card px-3 py-3 text-card-foreground">
                   <span
                     aria-hidden
-                    className="absolute top-3 right-0 flex h-6 w-5 translate-x-full items-center justify-center rounded-r bg-accent text-[0.65rem] font-medium text-accent-foreground"
+                    className="absolute top-1/2 right-0 flex h-6 w-5 -translate-y-1/2 translate-x-full items-center justify-center rounded-r bg-accent text-[0.65rem] font-medium text-accent-foreground"
                   >
                     {match.contact.name.trim().charAt(0).toUpperCase() || "·"}
                   </span>
-                  <p className="pr-2 text-xs text-accent">{match.reason}</p>
-                  <h3 className="font-display mt-1 text-lg leading-tight font-medium">{match.contact.name}</h3>
-                  {match.contact.who ? (
-                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{match.contact.who}</p>
-                  ) : null}
+                  <div className="h-full overflow-hidden">
+                    <p className="pr-1 text-xs text-accent">{match.reason}</p>
+                    <h3 className="font-display mt-1 truncate text-lg leading-tight font-medium">{match.contact.name}</h3>
+                    {match.contact.who ? (
+                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{match.contact.who}</p>
+                    ) : null}
+                  </div>
                 </article>
               </Link>
             </li>

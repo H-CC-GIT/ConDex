@@ -2,7 +2,6 @@ import { Highlight } from "@/components/highlight";
 import { formatDay, initials } from "@/lib/format";
 import { matchExcerpt } from "@/lib/search-text";
 import type { Contact } from "@/lib/types";
-import { cn } from "cn";
 
 export function CardFace({
   contact,
@@ -16,13 +15,14 @@ export function CardFace({
   onOpen: () => void;
 }) {
   const place = [contact.organization, contact.city].filter(Boolean).join(" · ");
-  const notesExcerpt = query.trim() ? matchExcerpt(contact.notes, query) : null;
   const meetingExcerpt = query.trim()
     ? matchExcerpt(
         contact.meetings.map((meeting) => `${meeting.place} ${meeting.what}`).join(" "),
         query,
       )
     : null;
+  const notesExcerpt = !meetingExcerpt && query.trim() ? matchExcerpt(contact.notes, query) : null;
+  const excerpt = meetingExcerpt ?? notesExcerpt;
   const due = Boolean(contact.followUpOn && contact.followUpOn <= today);
   const tab = contact.name.trim().charAt(0).toUpperCase() || "·";
 
@@ -33,73 +33,43 @@ export function CardFace({
       aria-selected
       tabIndex={-1}
       onClick={onOpen}
-      className="card-sheet paper relative flex min-h-[22rem] w-full cursor-pointer flex-col rounded-2xl border border-border bg-card px-5 py-5 text-left text-card-foreground shadow-[0_28px_50px_-28px_rgba(0,0,0,0.9)]"
+      className="paper relative aspect-[7/4] w-full cursor-pointer rounded-xl border border-border bg-card text-left text-card-foreground shadow-[0_22px_40px_-24px_rgba(0,0,0,0.9)]"
     >
       <span
         aria-hidden
-        className="absolute top-8 right-0 flex h-9 w-8 translate-x-full items-center justify-center rounded-r-md bg-accent text-sm font-medium text-accent-foreground"
+        className="absolute top-1/2 right-0 flex h-7 w-6 -translate-y-1/2 translate-x-full items-center justify-center rounded-r-md bg-accent text-xs font-medium text-accent-foreground"
       >
         {tab}
       </span>
-      <div className="card-depth flex items-start gap-3">
-        <div className="card-photo shrink-0">
-          <Portrait contact={contact} />
-        </div>
-        <div className="card-type min-w-0 flex-1 pr-2">
-          <h2 className="font-display text-2xl leading-tight font-medium tracking-tight">
+      <div className="flex h-full min-h-0 items-start gap-3 overflow-hidden px-4 py-3.5 sm:gap-4 sm:px-5 sm:py-4">
+        <Portrait contact={contact} />
+        <div className="min-w-0 flex-1 pr-1">
+          <h2 className="font-display truncate text-xl leading-tight font-medium tracking-tight sm:text-2xl">
             <Highlight text={contact.name} query={query} />
           </h2>
           {contact.who ? (
-            <p className="mt-1 text-sm leading-snug text-muted-foreground">
+            <p className="mt-1 line-clamp-2 text-sm leading-snug text-muted-foreground">
               <Highlight text={contact.who} query={query} />
             </p>
           ) : (
-            <p className="mt-1 text-sm text-muted-foreground">No line yet about who they are.</p>
+            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">No line yet about who they are.</p>
           )}
+          {place ? (
+            <p className="mt-2 truncate text-sm">
+              <Highlight text={place} query={query} />
+            </p>
+          ) : null}
+          {due && contact.followUpOn ? (
+            <p className="mt-1.5 text-xs font-medium text-[var(--due)]">Due {formatDay(contact.followUpOn)}</p>
+          ) : null}
+          {excerpt ? (
+            <p className="mt-1.5 truncate text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">{meetingExcerpt ? "Met" : "Notes"} · </span>
+              <Highlight text={excerpt} query={query} />
+            </p>
+          ) : null}
         </div>
       </div>
-
-      {place ? (
-        <p className="mt-4 text-sm">
-          <Highlight text={place} query={query} />
-        </p>
-      ) : null}
-
-      {contact.tags.length > 0 ? (
-        <ul className="mt-3 flex flex-wrap gap-1.5">
-          {contact.tags.map((tag) => (
-            <li key={tag} className="rounded-full bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">
-              <Highlight text={tag} query={query} />
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
-      {contact.introducedByName ? (
-        <p className="mt-4 text-xs text-muted-foreground">
-          Introduced by <Highlight text={contact.introducedByName} query={query} />
-        </p>
-      ) : null}
-
-      {contact.followUpOn ? (
-        <p className={cn("mt-2 text-xs", due ? "font-medium text-[var(--due)]" : "text-muted-foreground")}>
-          {due ? "Due" : "Follow up"} {formatDay(contact.followUpOn)}
-        </p>
-      ) : null}
-
-      {notesExcerpt ? (
-        <p className="mt-4 border-t border-border pt-3 text-xs leading-relaxed text-muted-foreground">
-          <span className="font-medium text-foreground">Notes · </span>
-          <Highlight text={notesExcerpt} query={query} />
-        </p>
-      ) : null}
-
-      {meetingExcerpt ? (
-        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-          <span className="font-medium text-foreground">Met · </span>
-          <Highlight text={meetingExcerpt} query={query} />
-        </p>
-      ) : null}
     </article>
   );
 }
@@ -109,13 +79,13 @@ function Portrait({ contact }: { contact: Contact }) {
     return (
       // Photos are private files served by the app, not the image optimizer.
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={contact.photoUrl} alt="" className="size-14 shrink-0 rounded-xl object-cover" />
+      <img src={contact.photoUrl} alt="" className="size-12 shrink-0 rounded-lg object-cover sm:size-14" />
     );
   }
   return (
     <div
       aria-hidden
-      className="font-display flex size-14 shrink-0 items-center justify-center rounded-xl bg-secondary text-lg text-secondary-foreground"
+      className="font-display flex size-12 shrink-0 items-center justify-center rounded-lg bg-secondary text-base text-secondary-foreground sm:size-14 sm:text-lg"
     >
       {initials(contact.name)}
     </div>
