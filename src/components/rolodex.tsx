@@ -20,6 +20,7 @@ export function Rolodex() {
   const [pending, setPending] = useState(false);
   const [selected, setSelected] = useState(0);
   const [addOpen, setAddOpen] = useState(false);
+  const [nudge, setNudge] = useState(0);
   const router = useRouter();
   const searchRef = useRef<HTMLInputElement>(null);
   const requestId = useRef(0);
@@ -77,6 +78,7 @@ export function Rolodex() {
   const move = useCallback(
     (step: number) => {
       if (count === 0) return;
+      setNudge((value) => value + step);
       setSelected((index) => {
         const current = Math.min(index, count - 1);
         return (current + step + count) % count;
@@ -239,6 +241,7 @@ export function Rolodex() {
             if (active) router.push(`/cards/${active.id}`);
           }}
           onMove={move}
+          nudge={nudge}
           placeholder={
             status === "loading" ? (
               <SkeletonCard />

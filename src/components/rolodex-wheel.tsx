@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type ReactNode, type TouchEvent } from "react";
+import { useEffect, useState, useRef, type ReactNode, type AnimationEvent, type TouchEvent } from "react";
 import { CardFace } from "@/components/card-face";
 import type { Contact } from "@/lib/types";
 
@@ -10,6 +10,7 @@ export function RolodexWheel({
   count,
   query,
   today,
+  nudge,
   onOpen,
   onMove,
   placeholder,
@@ -19,13 +20,48 @@ export function RolodexWheel({
   count: number;
   query: string;
   today: string;
+  nudge: number;
   onOpen: () => void;
   onMove: (step: number) => void;
   placeholder?: ReactNode;
 }) {
+  const [shown, setShown] = useState<Contact | null>(contact);
+  const [leaving, setLeaving] = useState<Contact | null>(null);
+  const [seenNudge, setSeenNudge] = useState(nudge);
+  const [dir, setDir] = useState<"forward" | "back">("forward");
   const touchX = useRef<number | null>(null);
   const swiped = useRef(false);
-  const stacked = count > 1;
+
+  if (nudge !== seenNudge) {
+    const delta = nudge - seenNudge;
+    setSeenNudge(nudge);
+    const reduce =
+      typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!reduce && shown && contact && shown.id !== contact.id && !leaving) {
+      setLeaving(shown);
+      setDir(delta > 0 ? "forward" : "back");
+      setShown(contact);
+    } else {
+      setLeaving(null);
+      setShown(contact);
+    }
+  } else if ((contact?.id ?? null) !== (shown?.id ?? null)) {
+    setShown(contact);
+    setLeaving(null);
+  } else if (contact && contact !== shown) {
+    setShown(contact);
+  }
+
+  useEffect(() => {
+    if (!leaving) return;
+    const timer = window.setTimeout(() => setLeaving(null), 280);
+    return () => window.clearTimeout(timer);
+  }, [leaving]);
+
+  function onSlideEnd(event: AnimationEvent<HTMLDivElement>) {
+    if (event.target !== event.currentTarget) return;
+    setLeaving(null);
+  }
 
   function onTouchStart(event: TouchEvent) {
     touchX.current = event.changedTouches[0]?.clientX ?? null;
@@ -41,6 +77,15 @@ export function RolodexWheel({
     swiped.current = true;
     onMove(delta < 0 ? 1 : -1);
   }
+
+  const stacked = count > 1;
+  const open = () => {
+    if (swiped.current) {
+      swiped.current = false;
+      return;
+    }
+    onOpen();
+  };
 
   return (
     <div className="mx-auto flex w-full max-w-[36rem] flex-col items-center">
@@ -66,22 +111,28 @@ export function RolodexWheel({
             </>
           ) : null}
           <div className="relative -translate-y-2">
-            {contact ? (
-              <CardFace
-                contact={contact}
-                query={query}
-                today={today}
-                onOpen={() => {
-                  if (swiped.current) {
-                    swiped.current = false;
-                    return;
-                  }
-                  onOpen();
-                }}
-              />
-            ) : (
-              placeholder
-            )}
+            {leaving ? (
+              <div
+                aria-hidden
+                className="card-slide pointer-events-none absolute inset-0"
+                data-motion="out"
+                data-dir={dir}
+              >
+                <CardFace contact={leaving} query={query} today={today} onOpen={() => {}} />
+              </div>
+            ) : null}
+            <div
+              className={leaving ? "card-slide" : undefined}
+              data-motion={leaving ? "in" : undefined}
+              data-dir={dir}
+              onAnimationEnd={onSlideEnd}
+            >
+              {shown ? (
+                <CardFace contact={shown} query={query} today={today} onOpen={open} />
+              ) : (
+                placeholder
+              )}
+            </div>
           </div>
         </div>
         <div
