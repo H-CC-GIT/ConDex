@@ -37,7 +37,7 @@ sudo yunohost app install /path/to/ConDex
 
 Choose a domain and a path. `/` serves ConDex at the domain root. A path such as `/condex` is picked up when the app is built, so assets and the API stay on that path.
 
-Yunohost’s login is the only door. The whole app, including photos and the API, sits behind it. The default permission is `all_users` (people with an account on that server), not visitors, and the permission cannot be opened to visitors. If anyone else has an account, limit the ConDex permission to your user after install.
+Yunohost’s login is the only door. The whole app, including photos and the API, sits behind it. The install offers the permission to admins. It cannot be opened to visitors. Widen it afterwards only for people who should see the book.
 
 The SQLite file and photos live in the app’s data directory (usually `/home/yunohost.app/condex`), outside the install directory. An upgrade replaces the app code and leaves the book in place.
 

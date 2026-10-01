@@ -272,9 +272,10 @@ function kindLabel(kind: ContactPoint["kind"]) {
 }
 
 function pointHref(point: ContactPoint) {
-  if (point.kind === "email") return `mailto:${point.value}`;
+  const singleLine = point.value.replace(/[\r\n]/g, "");
+  if (point.kind === "email") return singleLine ? `mailto:${singleLine}` : null;
   if (point.kind === "phone") {
-    const digits = point.value.replace(/[^\d+]/g, "");
+    const digits = singleLine.replace(/[^\d+]/g, "");
     return digits ? `tel:${digits}` : null;
   }
   if (point.kind === "url") {

@@ -34,7 +34,7 @@ ram.runtime = "256M"
 
     [install.init_main_permission]
     type = "group"
-    default = "all_users"
+    default = "admins"
 
 [resources]
     [resources.system_user]

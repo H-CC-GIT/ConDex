@@ -15,6 +15,7 @@ export async function GET(_request: Request, context: Context) {
   return new NextResponse(new Uint8Array(photo.data), {
     headers: {
       "Content-Type": photo.mime,
+      "X-Content-Type-Options": "nosniff",
       "Cache-Control": "private, max-age=3600",
     },
   });

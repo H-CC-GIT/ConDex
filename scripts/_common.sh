@@ -47,7 +47,9 @@ build_condex() {
 ensure_data_dirs() {
     mkdir -p "$data_dir/photos"
     chown -R "$app:$app" "$data_dir"
+    chmod 700 "$data_dir" "$data_dir/photos"
     mkdir -p "/var/log/$app"
     touch "/var/log/$app/$app.log"
     chown -R "$app:$app" "/var/log/$app"
+    chmod 750 "/var/log/$app"
 }

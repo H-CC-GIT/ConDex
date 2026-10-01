@@ -19,6 +19,7 @@ ynh_script_progression "Restoring the data directory..."
 ynh_restore "$data_dir"
 mkdir -p "$data_dir/photos"
 chown -R "$app:$app" "$data_dir"
+chmod 700 "$data_dir" "$data_dir/photos"
 
 #=================================================
 # RESTORE SYSTEM CONFIGURATION
@@ -34,6 +35,7 @@ yunohost service add "$app" --description="Private rolodex" --log="/var/log/$app
 
 mkdir -p "/var/log/$app"
 chown -R "$app:$app" "/var/log/$app"
+chmod 750 "/var/log/$app"
 ynh_restore "/etc/logrotate.d/$app"
 
 #=================================================
